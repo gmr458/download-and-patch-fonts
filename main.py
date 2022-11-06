@@ -28,22 +28,18 @@ headers = {
 class Font:
     """Class Font"""
 
-    def __init__(
-        self,
-        owner,
-        repo,
-        tag="",
-        file_name="",
-        download_url="",
-        file_name_start_with="",
-    ):
-        self.owner = owner
-        self.repo = repo
-        self.tag = tag or self.get_tag()
-        self.file_name = file_name or self.get_file_name(file_name_start_with)
+    def __init__(self, metadata):
+        self.owner = metadata["owner"]
+        self.repo = metadata["repo"]
+        self.tag = metadata["tag"] or self.get_tag()
+        self.filename = metadata["filename"] or self.get_filename(
+            metadata["filename_start_with"]
+        )
         self.download_url = (
-            download_url
-            or f"https://github.com/{self.owner}/{self.repo}/releases/download/{self.tag}/{self.file_name}"
+            metadata["download_url"]
+            or "https://github.com/"
+            f"{self.owner}/{self.repo}"
+            f"/releases/download/{self.tag}/{self.filename}"
         )
 
     def get_tag(self) -> str:
@@ -63,7 +59,7 @@ class Font:
 
         return "none"
 
-    def get_file_name(self, file_name_start_with="") -> str:
+    def get_filename(self, filename_start_with="") -> str:
         """Get file name from GitHub API"""
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
@@ -77,7 +73,7 @@ class Font:
                     return data["assets"][0]["name"]
 
                 for asset in data["assets"]:
-                    if asset["name"].find(file_name_start_with) != -1:
+                    if asset["name"].find(filename_start_with) != -1:
                         return asset["name"]
         except urllib.error.HTTPError as err:
             if str(err) == "HTTP Error 401: Unauthorized":
@@ -143,33 +139,33 @@ fonts = (
         "owner": "tonsky",
         "repo": "FiraCode",
         "tag": "",
-        "file_name": "",
+        "filename": "",
+        "filename_start_with": "",
         "download_url": "",
-        "file_name_start_with": "",
     },
     {
         "owner": "microsoft",
         "repo": "cascadia-code",
         "tag": "",
-        "file_name": "",
+        "filename": "",
+        "filename_start_with": "",
         "download_url": "",
-        "file_name_start_with": "",
     },
     {
         "owner": "be5invis",
         "repo": "Iosevka",
         "tag": "",
-        "file_name": "",
+        "filename": "",
+        "filename_start_with": "ttf-iosevka-fixed-",
         "download_url": "",
-        "file_name_start_with": "ttf-iosevka-fixed-",
     },
     {
         "owner": "dtinth",
         "repo": "comic-mono-font",
         "tag": "",
-        "file_name": "ComicMono.ttf",
+        "filename": "ComicMono.ttf",
+        "filename_start_with": "",
         "download_url": "https://dtinth.github.io/comic-mono-font/ComicMono.ttf",
-        "file_name_start_with": "",
     },
 )
 
@@ -188,36 +184,28 @@ def download_and_extract_fonts(list_fonts):
 
     os.makedirs(TEMP_DIR)
 
-    for item in list_fonts:
-        font = Font(
-            item["owner"],
-            item["repo"],
-            item["tag"],
-            item["file_name"],
-            item["download_url"],
-            item["file_name_start_with"],
-        )
+    for metadata in list_fonts:
+        font = Font(metadata)
+        dest = f"{TEMP_DIR}/{font.filename}"
 
-        dest = f"{TEMP_DIR}/{font.file_name}"
-
-        if is_ttf(font.file_name):
+        if is_ttf(font.filename):
             dest = (
-                f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/{font.file_name}"
+                f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/{font.filename}"
             )
 
         print(f"Downloading {font.download_url}")
         urllib.request.urlretrieve(font.download_url, dest)
-        print(f"{font.file_name} downloaded.\n")
+        print(f"{font.filename} downloaded.\n")
 
-        if is_ttf(font.file_name):
+        if is_ttf(font.filename):
             continue
 
-        print(f"Extracting {font.file_name}")
+        print(f"Extracting {font.filename}")
         with subprocess.Popen(
             [
                 "unzip",
                 "-q",
-                f"{TEMP_DIR}/{font.file_name}",
+                f"{TEMP_DIR}/{font.filename}",
                 "-d",
                 f"{TEMP_DIR}/{font.repo}",
             ],
@@ -225,7 +213,7 @@ def download_and_extract_fonts(list_fonts):
             stderr=subprocess.PIPE,
         ) as process:
             process.communicate()
-            print(f"{font.file_name} extracted.\n")
+            print(f"{font.filename} extracted.\n")
 
 
 download_and_extract_fonts(fonts)
