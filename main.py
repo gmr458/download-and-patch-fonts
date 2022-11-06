@@ -1,36 +1,53 @@
+"""Download and path fonts"""
+
 import json
 import os
 import shutil
 import subprocess
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 
-token = ""
+TOKEN = ""
 
 while True:
-    token = input("Enter GitHub API token: ")
+    TOKEN = input("Enter GitHub API token: ")
 
-    if token == "":
+    if TOKEN == "":
         continue
-    else:
-        break
+
+    break
 
 headers = {
     "Accept": "application/vnd.github+json",
-    "Authorization": f"Bearer {token}",
+    "Authorization": f"Bearer {TOKEN}",
 }
 
 
 class Font:
-    def __init__(self, owner, repo, file_name_start_with=""):
+    """Class Font"""
+
+    def __init__(
+        self,
+        owner,
+        repo,
+        tag="",
+        file_name="",
+        download_url="",
+        file_name_start_with="",
+    ):
         self.owner = owner
         self.repo = repo
-        self.tag = self.get_tag()
-        self.file_name = self.get_file_name(file_name_start_with)
-        self.download_url = f"https://github.com/{self.owner}/{self.repo}/releases/download/{self.tag}/{self.file_name}"
+        self.tag = tag or self.get_tag()
+        self.file_name = file_name or self.get_file_name(file_name_start_with)
+        self.download_url = (
+            download_url
+            or f"https://github.com/{self.owner}/{self.repo}/releases/download/{self.tag}/{self.file_name}"
+        )
 
-    def get_tag(self):
+    def get_tag(self) -> str:
+        """Get tag from GitHub API"""
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
         req = urllib.request.Request(url=url, headers=headers)
@@ -39,12 +56,15 @@ class Font:
             with urllib.request.urlopen(req) as response:
                 data = json.load(response)
                 return data["tag_name"]
-        except urllib.error.HTTPError as e:
-            if str(e) == "HTTP Error 401: Unauthorized":
+        except urllib.error.HTTPError as err:
+            if str(err) == "HTTP Error 401: Unauthorized":
                 print("Invalid token")
-                exit()
+                sys.exit()
 
-    def get_file_name(self, file_name_start_with=""):
+        return "none"
+
+    def get_file_name(self, file_name_start_with="") -> str:
+        """Get file name from GitHub API"""
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
         req = urllib.request.Request(url=url, headers=headers)
@@ -56,42 +76,45 @@ class Font:
                 if len(data["assets"]) == 1:
                     return data["assets"][0]["name"]
 
-                for a in data["assets"]:
-                    if a["name"].find(file_name_start_with) != -1:
-                        return a["name"]
-        except urllib.error.HTTPError as e:
-            if str(e) == "HTTP Error 401: Unauthorized":
+                for asset in data["assets"]:
+                    if asset["name"].find(file_name_start_with) != -1:
+                        return asset["name"]
+        except urllib.error.HTTPError as err:
+            if str(err) == "HTTP Error 401: Unauthorized":
                 print("Invalid token")
-                exit()
+                sys.exit()
+
+        return "none"
 
 
-home_dir = os.getenv("HOME")
+HOME_DIR = os.getenv("HOME")
 
 # 1. Clone nerd-fonts repo.
 def clone_nerd_fonts_repo():
-    if not os.path.exists(f"{home_dir}/Programs"):
-        os.makedirs(f"{home_dir}/Programs")
+    """Clone nerd-fonts repo from GitHub"""
+    if not os.path.exists(f"{HOME_DIR}/Programs"):
+        os.makedirs(f"{HOME_DIR}/Programs")
 
-    if os.path.exists(f"{home_dir}/Programs/nerd-fonts"):
-        shutil.rmtree(f"{home_dir}/Programs/nerd-fonts")
+    if os.path.exists(f"{HOME_DIR}/Programs/nerd-fonts"):
+        shutil.rmtree(f"{HOME_DIR}/Programs/nerd-fonts")
 
-    print("Cloning https://github.com/ryanoasis/nerd-fonts.git")
-    process = subprocess.Popen(
+    print("\nCloning https://github.com/ryanoasis/nerd-fonts.git")
+    with subprocess.Popen(
         [
             "git",
             "clone",
             "--filter=blob:none",
             "--sparse",
             "https://github.com/ryanoasis/nerd-fonts.git",
-            f"{home_dir}/Programs/nerd-fonts",
+            f"{HOME_DIR}/Programs/nerd-fonts",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-    )
-    process.communicate()
-    print("https://github.com/ryanoasis/nerd-fonts.git cloned.\n")
+    ) as process:
+        process.communicate()
+        print("https://github.com/ryanoasis/nerd-fonts.git cloned.\n")
 
-    process = subprocess.Popen(
+    with subprocess.Popen(
         [
             "git",
             "sparse-checkout",
@@ -101,15 +124,15 @@ def clone_nerd_fonts_repo():
             "src/glyphs",
             "src/svgs",
         ],
-        cwd=f"{home_dir}/Programs/nerd-fonts",
+        cwd=f"{HOME_DIR}/Programs/nerd-fonts",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-    )
-    process.communicate()
-    print("Directories bin, css, src/glyphs and src/svgs added.\n")
+    ) as process:
+        process.communicate()
+        print("Directories bin, css, src/glyphs and src/svgs added.\n")
 
-    os.makedirs(f"{home_dir}/Programs/nerd-fonts/patched-fonts")
-    os.makedirs(f"{home_dir}/Programs/nerd-fonts/src/unpatched-fonts")
+    os.makedirs(f"{HOME_DIR}/Programs/nerd-fonts/patched-fonts")
+    os.makedirs(f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts")
 
 
 clone_nerd_fonts_repo()
@@ -119,72 +142,145 @@ fonts = (
     {
         "owner": "tonsky",
         "repo": "FiraCode",
+        "tag": "",
+        "file_name": "",
+        "download_url": "",
         "file_name_start_with": "",
     },
     {
         "owner": "microsoft",
         "repo": "cascadia-code",
+        "tag": "",
+        "file_name": "",
+        "download_url": "",
         "file_name_start_with": "",
     },
     {
         "owner": "be5invis",
         "repo": "Iosevka",
+        "tag": "",
+        "file_name": "",
+        "download_url": "",
         "file_name_start_with": "ttf-iosevka-fixed-",
+    },
+    {
+        "owner": "dtinth",
+        "repo": "comic-mono-font",
+        "tag": "",
+        "file_name": "ComicMono.ttf",
+        "download_url": "https://dtinth.github.io/comic-mono-font/ComicMono.ttf",
+        "file_name_start_with": "",
     },
 )
 
-temp_dir = "/tmp/fonts"
+TEMP_DIR = "/tmp/fonts"
+
+
+def is_ttf(filename: str) -> bool:
+    """The font to download is .ttf, there are link that download .zip files"""
+    return filename.find(".ttf") != -1
 
 
 def download_and_extract_fonts(list_fonts):
-    if os.path.exists(temp_dir) and os.path.isdir(temp_dir):
-        shutil.rmtree(temp_dir)
+    """Download and extract fonts in temp directory /tmp/fonts"""
+    if os.path.exists(TEMP_DIR) and os.path.isdir(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
 
-    os.makedirs(temp_dir)
+    os.makedirs(TEMP_DIR)
 
-    for f in list_fonts:
-        font = Font(f["owner"], f["repo"], f["file_name_start_with"])
+    for item in list_fonts:
+        font = Font(
+            item["owner"],
+            item["repo"],
+            item["tag"],
+            item["file_name"],
+            item["download_url"],
+            item["file_name_start_with"],
+        )
+
+        dest = f"{TEMP_DIR}/{font.file_name}"
+
+        if is_ttf(font.file_name):
+            dest = (
+                f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/{font.file_name}"
+            )
 
         print(f"Downloading {font.download_url}")
-        urllib.request.urlretrieve(font.download_url, f"{temp_dir}/{font.file_name}")
+        urllib.request.urlretrieve(font.download_url, dest)
         print(f"{font.file_name} downloaded.\n")
 
+        if is_ttf(font.file_name):
+            continue
+
         print(f"Extracting {font.file_name}")
-        process = subprocess.Popen(
+        with subprocess.Popen(
             [
                 "unzip",
                 "-q",
-                f"{temp_dir}/{font.file_name}",
+                f"{TEMP_DIR}/{font.file_name}",
                 "-d",
-                f"{temp_dir}/{font.repo}",
+                f"{TEMP_DIR}/{font.repo}",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
-        process.communicate()
-        print(f"{font.file_name} extracted.\n")
+        ) as process:
+            process.communicate()
+            print(f"{font.file_name} extracted.\n")
 
 
 download_and_extract_fonts(fonts)
 
 # 3. Copy ttf files downloaded to ~/Programs/nerd-fonts/src/unpatched-fonts
 ttf_files = (
-    f"{temp_dir}/FiraCode/ttf/FiraCode-Regular.ttf",
-    f"{temp_dir}/cascadia-code/ttf/static/CascadiaCode-Light.ttf",
-    f"{temp_dir}/cascadia-code/ttf/static/CascadiaCode-LightItalic.ttf",
-    f"{temp_dir}/cascadia-code/ttf/static/CascadiaCode-SemiLight.ttf",
-    f"{temp_dir}/cascadia-code/ttf/static/CascadiaCode-SemiLightItalic.ttf",
-    f"{temp_dir}/Iosevka/iosevka-fixed-regular.ttf",
-    f"{temp_dir}/Iosevka/iosevka-fixed-italic.ttf",
+    f"{TEMP_DIR}/FiraCode/ttf/FiraCode-Regular.ttf",
+    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-Light.ttf",
+    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-LightItalic.ttf",
+    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLight.ttf",
+    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLightItalic.ttf",
+    f"{TEMP_DIR}/Iosevka/iosevka-fixed-regular.ttf",
+    f"{TEMP_DIR}/Iosevka/iosevka-fixed-italic.ttf",
 )
 
 
 def copy_and_paste_fonts():
+    """Copy downloaded fonts and paste in src/unpatched-fonts inside nerd-fonts repo"""
     for file in ttf_files:
-        shutil.copy(file, f"{home_dir}/Programs/nerd-fonts/src/unpatched-fonts/")
+        shutil.copy(file, f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/")
 
 
 copy_and_paste_fonts()
 
 # Remove temporal dir for downloaded fonts
-shutil.rmtree(temp_dir)
+shutil.rmtree(TEMP_DIR)
+
+# Path fonts
+def path_fonts():
+    "Path fonts previosly downloaded"
+    print("Patching fonts in ~/Programs/nerd-fonts/src/unpatched-fonts\n")
+
+    fonts_to_path = os.listdir(f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts")
+
+    for font in fonts_to_path:
+        print(f"Patching {font}")
+        with subprocess.Popen(
+            [
+                "fontforge",
+                "-script",
+                "font-patcher",
+                f"src/unpatched-fonts/{font}",
+                "--complete",
+                "--mono",
+                "--outputdir",
+                "patched-fonts",
+            ],
+            cwd=f"{HOME_DIR}/Programs/nerd-fonts",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        ) as process:
+            process.communicate()
+            print(f"{font} patched.\n")
+
+    print("All patched fonts are in ~/Programs/nerd-fonts/patched-fonts\n")
+
+
+path_fonts()
