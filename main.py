@@ -189,9 +189,7 @@ def download_and_extract_fonts(list_fonts):
         dest = f"{TEMP_DIR}/{font.filename}"
 
         if is_ttf(font.filename):
-            dest = (
-                f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/{font.filename}"
-            )
+            dest = f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/{font.filename}"
 
         print(f"Downloading {font.download_url}")
         urllib.request.urlretrieve(font.download_url, dest)
@@ -218,22 +216,75 @@ def download_and_extract_fonts(list_fonts):
 
 download_and_extract_fonts(fonts)
 
-# 3. Copy ttf files downloaded to ~/Programs/nerd-fonts/src/unpatched-fonts
+# 3. Apply stylistic sets and copy ttf files downloaded to ~/Programs/nerd-fonts/src/unpatched-fonts
 ttf_files = (
-    f"{TEMP_DIR}/FiraCode/ttf/FiraCode-Regular.ttf",
-    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-Light.ttf",
-    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-LightItalic.ttf",
-    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLight.ttf",
-    f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLightItalic.ttf",
-    f"{TEMP_DIR}/Iosevka/iosevka-fixed-regular.ttf",
-    f"{TEMP_DIR}/Iosevka/iosevka-fixed-italic.ttf",
+    {
+        "path": f"{TEMP_DIR}/FiraCode/ttf/FiraCode-Regular.ttf",
+        "enable_stylistic_sets": True,
+        "stylistic_sets": "cv01,cv02,cv10,ss01,ss05",
+    },
+    {
+        "path": f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-Light.ttf",
+        "enable_stylistic_sets": True,
+        "stylistic_sets": "ss19",
+    },
+    {
+        "path": f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-LightItalic.ttf",
+        "enable_stylistic_sets": True,
+        "stylistic_sets": "ss01,ss19",
+    },
+    {
+        "path": f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLight.ttf",
+        "enable_stylistic_sets": True,
+        "stylistic_sets": "ss19",
+    },
+    {
+        "path": f"{TEMP_DIR}/cascadia-code/ttf/static/CascadiaCode-SemiLightItalic.ttf",
+        "enable_stylistic_sets": True,
+        "stylistic_sets": "ss01,ss19",
+    },
+    {
+        "path": f"{TEMP_DIR}/Iosevka/iosevka-fixed-regular.ttf",
+        "enable_stylistic_sets": False,
+        "stylistic_sets": "",
+    },
+    {
+        "path": f"{TEMP_DIR}/Iosevka/iosevka-fixed-italic.ttf",
+        "enable_stylistic_sets": False,
+        "stylistic_sets": "",
+    },
 )
+
+
+def apply_stylistic_sets():
+    """Apply stylistic sets"""
+    for file in ttf_files:
+        if file["enable_stylistic_sets"] is True:
+            print(f"Applying stylistic sets for {file['path']}")
+            with subprocess.Popen(
+                [
+                    "pyftfeatfreeze",
+                    "-f",
+                    file["stylistic_sets"],
+                    file["path"],
+                    file["path"],
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ) as process:
+                process.communicate()
+                print(f"Stylistic sets applied for {file['path']}")
+
+
+apply_stylistic_sets()
 
 
 def copy_and_paste_fonts():
     """Copy downloaded fonts and paste in src/unpatched-fonts inside nerd-fonts repo"""
     for file in ttf_files:
-        shutil.copy(file, f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/")
+        shutil.copy(
+            file["path"], f"{HOME_DIR}/Programs/nerd-fonts/src/unpatched-fonts/"
+        )
 
 
 copy_and_paste_fonts()
