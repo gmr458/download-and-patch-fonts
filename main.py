@@ -273,7 +273,7 @@ def apply_stylistic_sets():
                 stderr=subprocess.PIPE,
             ) as process:
                 process.communicate()
-                print(f"Stylistic sets applied for {file['path']}")
+                print(f"Stylistic sets applied for {file['path']}\n")
 
 
 apply_stylistic_sets()
