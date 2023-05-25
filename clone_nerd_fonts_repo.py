@@ -1,13 +1,34 @@
 """Clone ryanoasis/nerd-fonts repo from GitHub"""
 
+import json
 import os
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 
 HOME_DIR = os.getenv("HOME")
 URL_REPO = "https://github.com/ryanoasis/nerd-fonts.git"
 DEST_DIR = f"{HOME_DIR}/nerd-fonts"
+URL_API = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
+NF_LATEST_VERSION = ""
+
+req = urllib.request.Request(URL_API)
+
+try:
+    with urllib.request.urlopen(req) as response:
+        data = json.load(response)
+        NF_LATEST_VERSION = data["tag_name"]
+except urllib.error.HTTPError as err:
+    if str(err) == "HTTP Error 401: Unauthorized":
+        print("Invalid token")
+        sys.exit()
+
+if NF_LATEST_VERSION == "":
+    print("Could not get nerd-fonts latest tag")
+    sys.exit()
 
 
 def check_requirements():
@@ -47,6 +68,19 @@ def clone_nerd_fonts_repo():
     ) as process:
         process.communicate()
         print("Directories bin, css, src/glyphs and src/svgs added.\n")
+
+    with subprocess.Popen(
+        [
+            "git",
+            "checkout",
+            NF_LATEST_VERSION,
+        ],
+        cwd=DEST_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
+        process.communicate()
+        print(f"git checkout {NF_LATEST_VERSION} done.")
 
     os.makedirs(f"{DEST_DIR}/patched-fonts")
     os.makedirs(f"{DEST_DIR}/src/unpatched-fonts")
