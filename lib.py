@@ -49,7 +49,6 @@ class Font:
         """Get tag from GitHub API"""
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
-        # req = urllib.request.Request(url=url, headers=headers)
         req = urllib.request.Request(url=url)
 
         try:
