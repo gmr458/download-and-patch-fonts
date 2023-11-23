@@ -1,5 +1,6 @@
 """Clone ryanoasis/nerd-fonts repo from GitHub"""
 
+import argparse
 import json
 import os
 import shutil
@@ -13,22 +14,39 @@ HOME_DIR = os.getenv("HOME")
 URL_REPO = "https://github.com/ryanoasis/nerd-fonts.git"
 DEST_DIR = f"{HOME_DIR}/nerd-fonts"
 URL_API = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
-NF_LATEST_VERSION = ""
 
-req = urllib.request.Request(URL_API)
 
-try:
-    with urllib.request.urlopen(req) as response:
-        data = json.load(response)
-        NF_LATEST_VERSION = data["tag_name"]
-except urllib.error.HTTPError as err:
-    if str(err) == "HTTP Error 401: Unauthorized":
-        print("Invalid token")
+def main():
+    parser = argparse.ArgumentParser(
+        description="This script clone the latest release of github.com/ryanoasis/nerd-fonts"
+    )
+    parser.add_argument(
+        "dest",
+        nargs="?",
+        default=DEST_DIR,
+        help="Destination directory to clone the repository",
+    )
+
+    args = parser.parse_args()
+
+    req = urllib.request.Request(URL_API)
+
+    nf_latest_version = ""
+
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.load(response)
+            nf_latest_version = data["tag_name"]
+    except Exception as err:
+        print(f"Error {err}, Type: {type(err)}")
         sys.exit()
 
-if NF_LATEST_VERSION == "":
-    print("Could not get nerd-fonts latest tag")
-    sys.exit()
+    if nf_latest_version == "":
+        print("Could not get nerd-fonts latest tag")
+        sys.exit()
+
+    check_requirements()
+    clone_nerd_fonts_repo(args.dest, nf_latest_version)
 
 
 def check_requirements():
@@ -38,14 +56,17 @@ def check_requirements():
         sys.exit(0)
 
 
-def clone_nerd_fonts_repo():
+def clone_nerd_fonts_repo(dest_dir: str, nf_latest_version: str):
     """Clone ryanoasis/nerd-fonts repo from GitHub"""
-    if os.path.exists(DEST_DIR):
-        shutil.rmtree(DEST_DIR)
+    if os.path.exists(dest_dir):
+        content = os.listdir(dest_dir)
+        if len(content) > 0:
+            print("The destination directory has other directories or files.")
+            sys.exit(0)
 
     print(f"Cloning {URL_REPO}")
     with subprocess.Popen(
-        ["git", "clone", "--filter=blob:none", "--sparse", URL_REPO, DEST_DIR],
+        ["git", "clone", "--filter=blob:none", "--sparse", URL_REPO, dest_dir],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
@@ -62,7 +83,7 @@ def clone_nerd_fonts_repo():
             "src/glyphs",
             "src/svgs",
         ],
-        cwd=DEST_DIR,
+        cwd=dest_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
@@ -73,18 +94,18 @@ def clone_nerd_fonts_repo():
         [
             "git",
             "checkout",
-            NF_LATEST_VERSION,
+            nf_latest_version,
         ],
-        cwd=DEST_DIR,
+        cwd=dest_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
         process.communicate()
-        print(f"git checkout {NF_LATEST_VERSION} done.")
+        print(f"git checkout {nf_latest_version} done.")
 
-    os.makedirs(f"{DEST_DIR}/patched-fonts")
-    os.makedirs(f"{DEST_DIR}/src/unpatched-fonts")
+    os.makedirs(f"{dest_dir}/patched-fonts")
+    os.makedirs(f"{dest_dir}/src/unpatched-fonts")
 
 
-check_requirements()
-clone_nerd_fonts_repo()
+if __name__ == "__main__":
+    main()

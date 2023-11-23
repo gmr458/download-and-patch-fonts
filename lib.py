@@ -10,9 +10,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
-HOME_DIR = os.getenv("HOME")
 URL_NF_REPO = "https://github.com/ryanoasis/nerd-fonts.git"
-DEST_DIR = f"{HOME_DIR}/nerd-fonts"
 TEMP_DIR = "/tmp/fonts"
 
 
@@ -88,7 +86,7 @@ class Font:
 
 
 @dataclass(frozen=True)
-class Ttf:
+class TtfOtf:
     """.TTF file"""
 
     path: str
@@ -105,18 +103,18 @@ def get_latest_version_nf() -> str:
         with urllib.request.urlopen(req) as response:
             data = json.load(response)
             return data["tag_name"]
-    except urllib.error.HTTPError as err:
-        if str(err) == "HTTP Error 401: Unauthorized":
-            print("Invalid token")
-            sys.exit()
-
-    return ""
+    except Exception as err:
+        print(f"Error {err}, Type: {type(err)}")
+        sys.exit()
 
 
-def clone_nerd_fonts_repo(tag: str):
+def clone_nerd_fonts_repo(dest_dir: str, tag: str):
     """Clone nerd-fonts repo from GitHub"""
-    if os.path.exists(DEST_DIR):
-        shutil.rmtree(DEST_DIR)
+    if os.path.exists(dest_dir):
+        content = os.listdir(dest_dir)
+        if len(content) > 0:
+            print("The destination directory has other directories or files.")
+            sys.exit(0)
 
     print(f"Cloning {URL_NF_REPO}")
     with subprocess.Popen(
@@ -126,7 +124,7 @@ def clone_nerd_fonts_repo(tag: str):
             "--filter=blob:none",
             "--sparse",
             URL_NF_REPO,
-            DEST_DIR,
+            dest_dir,
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -144,7 +142,7 @@ def clone_nerd_fonts_repo(tag: str):
             "src/glyphs",
             "src/svgs",
         ],
-        cwd=DEST_DIR,
+        cwd=dest_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
@@ -157,23 +155,23 @@ def clone_nerd_fonts_repo(tag: str):
             "checkout",
             tag,
         ],
-        cwd=DEST_DIR,
+        cwd=dest_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ) as process:
         process.communicate()
         print(f"git checkout {tag} done.\n")
 
-    os.makedirs(f"{DEST_DIR}/patched-fonts")
-    os.makedirs(f"{DEST_DIR}/src/unpatched-fonts")
+    os.makedirs(f"{dest_dir}/patched-fonts")
+    os.makedirs(f"{dest_dir}/src/unpatched-fonts")
 
 
-def is_ttf(filename: str) -> bool:
+def is_ttf_or_otf(filename: str) -> bool:
     """The font to download is .ttf, there are link that download .zip files"""
-    return filename.find(".ttf") != -1
+    return filename.find(".ttf") != -1 or filename.find(".otf") != -1
 
 
-def download_and_extract_fonts(metadata_fonts: list[FontMetadata]):
+def download_and_extract_fonts(dest_dir: str, metadata_fonts: list[FontMetadata]):
     """Download and extract fonts in temp directory /tmp/fonts"""
     if os.path.exists(TEMP_DIR) and os.path.isdir(TEMP_DIR):
         shutil.rmtree(TEMP_DIR)
@@ -184,14 +182,14 @@ def download_and_extract_fonts(metadata_fonts: list[FontMetadata]):
         font = Font(metadata)
         dest = f"{TEMP_DIR}/{font.filename}"
 
-        if is_ttf(font.filename):
-            dest = f"{DEST_DIR}/src/unpatched-fonts/{font.filename}"
+        if is_ttf_or_otf(font.filename):
+            dest = f"{dest_dir}/src/unpatched-fonts/{font.filename}"
 
         print(f"Downloading {font.download_url}")
         urllib.request.urlretrieve(font.download_url, dest)
         print(f"{font.filename} downloaded.\n")
 
-        if is_ttf(font.filename):
+        if is_ttf_or_otf(font.filename):
             continue
 
         print(f"Extracting {font.filename}")
@@ -210,7 +208,7 @@ def download_and_extract_fonts(metadata_fonts: list[FontMetadata]):
             print(f"{font.filename} extracted.\n")
 
 
-def apply_stylistic_sets(ttf_files: list[Ttf]):
+def apply_stylistic_sets(ttf_files: list[TtfOtf]):
     """Apply stylistic sets"""
     for file in ttf_files:
         if file.enable_stylistic_sets is True:
@@ -227,20 +225,20 @@ def apply_stylistic_sets(ttf_files: list[Ttf]):
                 stderr=subprocess.PIPE,
             ) as process:
                 process.communicate()
-                print(f"Stylistic sets applied for {file.path}\n")
+                print(f"Stylistic sets {file.stylistic_sets} applied for {file.path}\n")
 
 
-def copy_and_paste_fonts(ttf_files: list[Ttf]):
+def copy_and_paste_fonts(dest_dir: str, ttf_files: list[TtfOtf]):
     """Copy downloaded fonts and paste in src/unpatched-fonts inside nerd-fonts repo"""
     for file in ttf_files:
-        shutil.copy(file.path, f"{DEST_DIR}/src/unpatched-fonts/")
+        shutil.copy(file.path, f"{dest_dir}/src/unpatched-fonts/")
 
 
-def path_fonts():
+def path_fonts(dest_dir: str):
     "Path fonts previosly downloaded"
-    print(f"Patching fonts in {DEST_DIR}/src/unpatched-fonts\n")
+    print(f"Patching fonts in {dest_dir}/src/unpatched-fonts\n")
 
-    fonts_to_path = os.listdir(f"{DEST_DIR}/src/unpatched-fonts")
+    fonts_to_path = os.listdir(f"{dest_dir}/src/unpatched-fonts")
 
     for font in fonts_to_path:
         print(f"Patching {font}")
@@ -255,11 +253,11 @@ def path_fonts():
                 "--outputdir",
                 "patched-fonts",
             ],
-            cwd=DEST_DIR,
+            cwd=dest_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as process:
             process.communicate()
             print(f"{font} patched.\n")
 
-    print(f"All patched fonts are in {DEST_DIR}/patched-fonts")
+    print(f"All patched fonts are in {dest_dir}/patched-fonts")
