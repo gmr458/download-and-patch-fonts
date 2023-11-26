@@ -7,6 +7,7 @@ import sys
 
 from lib import (
     FontMetadata,
+    LogLevel,
     TEMP_DIR_FONTS,
     TtfOtf,
     apply_stylistic_sets,
@@ -15,6 +16,7 @@ from lib import (
     copy_and_paste_fonts,
     download_and_extract_fonts,
     get_latest_version_nf,
+    log,
     path_fonts,
 )
 
@@ -47,62 +49,98 @@ fonts = [
 
 ttf_files = [
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/cascadia-code/ttf/static/CascadiaCode-Light.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-Light.ttf",
+        ),
         True,
         "ss19",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/cascadia-code/ttf/static/CascadiaCode-LightItalic.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-LightItalic.ttf",
+        ),
         True,
         "ss01,ss19",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/cascadia-code/ttf/static/CascadiaCode-SemiLight.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-SemiLight.ttf",
+        ),
         True,
         "ss19",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/cascadia-code/ttf/static/CascadiaCode-SemiLightItalic.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-SemiLightItalic.ttf",
+        ),
         True,
         "ss01,ss19",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/FiraCode/ttf/FiraCode-Regular.ttf",
+        os.path.join(TEMP_DIR_FONTS, "FiraCode", "ttf", "FiraCode-Regular.ttf"),
         True,
         "cv01,cv02,cv10,ss01,ss05,cv16,cv29",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/geist-font/GeistMono-Regular.otf",
+        os.path.join(TEMP_DIR_FONTS, "geist-font", "GeistMono-Regular.otf"),
         True,
         "ss08",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/Hack/ttf/Hack-Regular.ttf",
+        os.path.join(TEMP_DIR_FONTS, "Hack", "ttf", "Hack-Regular.ttf"),
         False,
         "",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/Hack/ttf/Hack-Italic.ttf",
+        os.path.join(TEMP_DIR_FONTS, "Hack", "ttf", "Hack-Italic.ttf"),
         False,
         "",
     ),
     # Ttf(
-    #     f"{TEMP_DIR}/Iosevka/iosevka-fixed-regular.ttf",
+    #     os.path.join(TEMP_DIR_FONTS, "Iosevka", "iosevka-fixed-regular.ttf"),
     #     False,
     #     "",
     # ),
     # Ttf(
-    #     f"{TEMP_DIR}/Iosevka/iosevka-fixed-italic.ttf",
+    #     os.path.join(TEMP_DIR_FONTS, "Iosevka", "iosevka-fixed-italic.ttf"),
     #     False,
     #     "",
     # ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/JetBrainsMono/fonts/ttf/JetBrainsMono-Regular.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "JetBrainsMono",
+            "fonts",
+            "ttf",
+            "JetBrainsMono-Regular.ttf",
+        ),
         True,
         "cv01,cv02,cv15,cv20,zero",
     ),
     TtfOtf(
-        f"{TEMP_DIR_FONTS}/JetBrainsMono/fonts/ttf/JetBrainsMono-Italic.ttf",
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "JetBrainsMono",
+            "fonts",
+            "ttf",
+            "JetBrainsMono-Italic.ttf",
+        ),
         True,
         "cv01,cv02,cv15,cv20,zero",
     ),
@@ -128,15 +166,18 @@ def main():
 
     args = parser.parse_args()
     if args.dest is None or args.dest == "":
-        print("Pass the destination directory to clone the repository")
+        log(
+            LogLevel.FATAL,
+            "Pass the destination directory to clone the repository as the first argument",
+        )
         sys.exit(1)
     if args.token is None or args.token == "":
-        print("Pass the GitHub API token")
+        log(LogLevel.FATAL, "Pass the GitHub API token as the second argument")
         sys.exit(1)
 
     latest_tag_nf = get_latest_version_nf(args.token)
     if latest_tag_nf == "":
-        print("Could not get nerd-fonts latest tag")
+        log(LogLevel.FATAL, "Could not get nerd-fonts latest tag")
         sys.exit(1)
 
     clone_nerd_fonts_repo(args.dest, latest_tag_nf)
