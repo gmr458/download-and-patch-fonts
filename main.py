@@ -34,6 +34,7 @@ fonts = [
     ),
     FontMetadata("tonsky", "FiraCode", "", "", "", ""),
     FontMetadata("vercel", "geist-font", "", "", "Geist.Mono", ""),
+    FontMetadata("IBM", "plex", "", "", "True", ""),
     FontMetadata("source-foundry", "Hack", "", "Hack-v3.003-ttf.zip", "", ""),
     # FontMetadata("be5invis", "Iosevka", "", "", "ttf-iosevka-fixed-", ""),
     FontMetadata("JetBrains", "JetBrainsMono", "", "", "", ""),
@@ -93,12 +94,34 @@ ttf_files = [
         "ss01,ss19",
     ),
     TtfOtf(
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-Regular.ttf",
+        ),
+        True,
+        "ss19",
+    ),
+    TtfOtf(
+        os.path.join(
+            TEMP_DIR_FONTS,
+            "cascadia-code",
+            "ttf",
+            "static",
+            "CascadiaCode-Italic.ttf",
+        ),
+        True,
+        "ss01,ss19",
+    ),
+    TtfOtf(
         os.path.join(TEMP_DIR_FONTS, "FiraCode", "ttf", "FiraCode-Regular.ttf"),
         True,
         "cv01,cv02,cv10,ss01,ss05,cv16,cv29",
     ),
     TtfOtf(
-        os.path.join(TEMP_DIR_FONTS, "geist-font", "GeistMono-Regular.otf"),
+        os.path.join(TEMP_DIR_FONTS, "geist-font", "Geist.Mono", "GeistMono-Regular.otf"),
         True,
         "ss08",
     ),
@@ -111,6 +134,16 @@ ttf_files = [
         os.path.join(TEMP_DIR_FONTS, "Hack", "ttf", "Hack-Italic.ttf"),
         False,
         "",
+    ),
+    TtfOtf(
+        os.path.join(TEMP_DIR_FONTS, "plex", "TrueType", "IBM-Plex-Mono", "IBMPlexMono-Regular.ttf"),
+        True,
+        "zero,salt",
+    ),
+    TtfOtf(
+        os.path.join(TEMP_DIR_FONTS, "plex", "TrueType", "IBM-Plex-Mono", "IBMPlexMono-Italic.ttf"),
+        True,
+        "zero",
     ),
     # Ttf(
     #     os.path.join(TEMP_DIR_FONTS, "Iosevka", "iosevka-fixed-regular.ttf"),

@@ -22,9 +22,13 @@ def log(level: LogLevel, message: str) -> None:
 
 URL_NF_REPO = "https://github.com/ryanoasis/nerd-fonts.git"
 
-TEMP_DIR = os.getenv("TEMP")
+TEMP_DIR = "/tmp"
+
+if platform.system() == "Windows":
+    TEMP_DIR = os.getenv("TEMP")
+
 if TEMP_DIR is None or TEMP_DIR == "":
-    log(LogLevel.FATAL, "Environment variable TEMP does not exists")
+    log(LogLevel.FATAL, "temporal folder does not exists")
     sys.exit(1)
 
 TEMP_DIR_FONTS = os.path.join(TEMP_DIR, "fonts")
