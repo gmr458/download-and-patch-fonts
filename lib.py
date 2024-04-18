@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import glob
 import json
 import os
 import platform
@@ -275,17 +276,19 @@ def apply_stylistic_sets(ttf_otf_files: list[TtfOtf]):
     """Apply stylistic sets"""
     for file in ttf_otf_files:
         if file.enable_stylistic_sets is True:
+            path = glob.glob(file.path)[0]
+
             log(
                 LogLevel.INFO,
-                f"applying stylistic sets {file.stylistic_sets} for {file.path}",
+                f"applying stylistic sets {file.stylistic_sets} for {path}",
             )
             with subprocess.Popen(
                 [
                     "pyftfeatfreeze",
                     "-f",
                     file.stylistic_sets,
-                    file.path,
-                    file.path,
+                    path,
+                    path,
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -293,17 +296,19 @@ def apply_stylistic_sets(ttf_otf_files: list[TtfOtf]):
                 process.communicate()
                 log(
                     LogLevel.INFO,
-                    f"stylistic sets {file.stylistic_sets} applied for {file.path}",
+                    f"stylistic sets {file.stylistic_sets} applied for {path}",
                 )
 
 
 def copy_and_paste_fonts(dest_dir: str, ttf_files: list[TtfOtf]):
     """Copy downloaded fonts and paste in src/unpatched-fonts inside nerd-fonts repo"""
     for file in ttf_files:
+        path = glob.glob(file.path)[0]
+
         dest_copy = os.path.join(dest_dir, "src", "unpatched-fonts")
-        log(LogLevel.INFO, f"copying {file.path} into {dest_copy}")
-        shutil.copy(file.path, dest_copy)
-        log(LogLevel.INFO, f"{file.path} copied into {dest_copy}")
+        log(LogLevel.INFO, f"copying {path} into {dest_copy}")
+        shutil.copy(path, dest_copy)
+        log(LogLevel.INFO, f"{path} copied into {dest_copy}")
 
 
 def path_fonts(dest_dir: str):
