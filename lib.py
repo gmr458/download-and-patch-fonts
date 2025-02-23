@@ -1,8 +1,15 @@
-"""Functions, classes and variables"""
+"""
+This script provides utilities for managing font repositories and applying stylistic sets
+to font files. It includes functionality for downloading, extracting, patching, and
+organizing font files.
 
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
+Dependencies:
+- `git`
+- `fontforge`
+- `unzip`
+- `pyftfeatfreeze`
+"""
+
 import glob
 import json
 import os
@@ -13,16 +20,29 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 
-LogLevel = Enum("LogLevel", ["INFO", "ERROR", "FATAL"])
+# Enum for logging levels
+LogLevel = Enum("LogLevel", ["INFO", "WARNING", "ERROR", "FATAL"])
 
 
 def log(level: LogLevel, message: str) -> None:
+    """
+    Logs a message with a given log level and timestamp.
+
+    Args:
+        level (LogLevel): The severity level of the log message.
+        message (str): The log message to display.
+    """
     print(f"[{level.name}] - {datetime.now()} - {message}")
 
 
+# URL for the Nerd Fonts repository
 URL_NF_REPO = "https://github.com/ryanoasis/nerd-fonts.git"
 
+# Path to the temporary directory for file operations
 TEMP_DIR = "/tmp"
 
 if platform.system() == "Windows":
@@ -32,12 +52,23 @@ if TEMP_DIR is None or TEMP_DIR == "":
     log(LogLevel.FATAL, "temporal folder does not exists")
     sys.exit(1)
 
+# Path to a specific temporary fonts directory
 TEMP_DIR_FONTS = os.path.join(TEMP_DIR, "fonts")
 
 
 @dataclass(frozen=True)
 class FontMetadata:
-    """Font Metadata"""
+    """
+    Represents metadata for a font file.
+
+    Attributes:
+        owner (str): The owner of the repository.
+        repo (str): The repository name.
+        tag (str): The release tag.
+        filename (str): The name of the font file.
+        filename_start_with (str): The starting pattern for the filename.
+        download_url (str): The URL to download the font file.
+    """
 
     owner: str
     repo: str
@@ -48,7 +79,17 @@ class FontMetadata:
 
 
 class Font:
-    """Class Font"""
+    """
+    Represents a font and its associated operations.
+
+    Attributes:
+        headers (dict): HTTP headers for API requests.
+        owner (str): The repository owner.
+        repo (str): The repository name.
+        tag (str): The release tag for the font.
+        filename (str): The filename of the font.
+        download_url (str): The download URL of the font.
+    """
 
     headers: dict[str, str] = {
         "Accept": "application/vnd.github+json",
@@ -56,6 +97,13 @@ class Font:
     }
 
     def __init__(self, metadata: FontMetadata, token: str):
+        """
+        Initializes the Font instance.
+
+        Args:
+            metadata (FontMetadata): The metadata for the font.
+            token (str): The GitHub API token.
+        """
         self.headers["Authorization"] = f"Bearer {token}"
         self.owner = metadata.owner
         self.repo = metadata.repo
@@ -71,7 +119,15 @@ class Font:
         )
 
     def get_tag(self) -> str:
-        """Get tag from GitHub API"""
+        """
+        Retrieves the latest release tag for the font.
+
+        Returns:
+            str: The latest release tag.
+
+        Raises:
+            SystemExit: If an HTTP 401 Unauthorized error occurs.
+        """
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
         req = urllib.request.Request(url=url, headers=self.headers)
@@ -88,7 +144,15 @@ class Font:
         return "none"
 
     def get_filename(self, filename_start_with="") -> str:
-        """Get file name from GitHub API"""
+        """
+        Retrieves the filename of a font asset.
+
+        Args:
+            filename_start_with (str): The starting pattern for the filename.
+
+        Returns:
+            str: The name of the font file.
+        """
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
 
         req = urllib.request.Request(url=url, headers=self.headers)
@@ -113,7 +177,14 @@ class Font:
 
 @dataclass(frozen=True)
 class TtfOtf:
-    """.TTF file"""
+    """
+    Represents a TrueType or OpenType font.
+
+    Attributes:
+        path (str): The file path to the font.
+        enable_stylistic_sets (bool): Whether to enable stylistic sets.
+        stylistic_sets (str): The stylistic sets to apply.
+    """
 
     path: str
     enable_stylistic_sets: bool
@@ -121,6 +192,11 @@ class TtfOtf:
 
 
 def check_requirements():
+    """
+    Checks if the necessary dependencies are installed.
+
+    Exits the program if a dependency is missing.
+    """
     if shutil.which("git") is None:
         log(LogLevel.ERROR, "git is required")
         sys.exit(1)
@@ -138,8 +214,19 @@ def check_requirements():
         sys.exit(1)
 
 
-def get_latest_version_nf(token: str) -> str:
-    """Get nerd-fonts latest tag from GitHub API"""
+def get_latest_version_nf(token: str) -> str | None:
+    """
+    Fetches the latest release version tag of the Nerd Fonts repository.
+
+    Args:
+        token (str): The GitHub API token.
+
+    Returns:
+        str: The latest version tag.
+
+    Raises:
+        SystemExit: If the request fails or an error occurs.
+    """
     url = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
     headers: dict[str, str] = {
         "Accept": "application/vnd.github+json",
@@ -152,6 +239,10 @@ def get_latest_version_nf(token: str) -> str:
         with urllib.request.urlopen(req) as response:
             data = json.load(response)
             return data["tag_name"]
+    except urllib.error.HTTPError as err:
+        if err.code == 401:
+            log(LogLevel.ERROR, "the github api token is invalid or expired")
+            sys.exit(1)
     except Exception as err:
         log(LogLevel.ERROR, "error trying to get latest nerd font version")
         print(f"Error {err}, Type: {type(err)}")
@@ -159,7 +250,16 @@ def get_latest_version_nf(token: str) -> str:
 
 
 def clone_nerd_fonts_repo(dest_dir: str, tag: str):
-    """Clone nerd-fonts repo from GitHub"""
+    """
+    Clones the Nerd Fonts repository and checks out a specific tag.
+
+    Args:
+        dest_dir (str): The destination directory for the cloned repository.
+        tag (str): The release tag to check out.
+
+    Raises:
+        SystemExit: If the destination directory is not empty.
+    """
     if os.path.exists(dest_dir):
         content = os.listdir(dest_dir)
         if len(content) > 0:
@@ -225,14 +325,30 @@ def clone_nerd_fonts_repo(dest_dir: str, tag: str):
 
 
 def is_ttf_or_otf(filename: str) -> bool:
-    """The font to download is .ttf, there are link that download .zip files"""
+    """
+    Determines whether a given file is a TrueType or OpenType font.
+
+    Args:
+        filename (str): The name of the file.
+
+    Returns:
+        bool: True if the file is a .ttf or .otf font, False otherwise.
+    """
     return filename.find(".ttf") != -1 or filename.find(".otf") != -1
 
 
 def download_and_extract_fonts(
-    dest_dir: str, metadata_fonts: list[FontMetadata], token: str
+    metadata_fonts: list[FontMetadata],
+    token: str,
 ):
-    """Download and extract fonts in temp directory /tmp/fonts"""
+    """
+    Downloads and extracts font files based on the provided metadata.
+
+    Args:
+        dest_dir (str): The directory to store the extracted font files.
+        metadata_fonts (list[FontMetadata]): A list of font metadata.
+        token (str): The GitHub API token.
+    """
     if os.path.exists(TEMP_DIR_FONTS) and os.path.isdir(TEMP_DIR_FONTS):
         shutil.rmtree(TEMP_DIR_FONTS)
 
@@ -242,11 +358,6 @@ def download_and_extract_fonts(
     for metadata in metadata_fonts:
         font = Font(metadata, token)
         dest_download = os.path.join(TEMP_DIR_FONTS, font.filename)
-
-        if is_ttf_or_otf(font.filename):
-            dest_download = os.path.join(
-                dest_dir, "src", "unpatched-fonts", font.filename
-            )
 
         log(LogLevel.INFO, f"downloading {font.download_url} into {dest_download}")
         urllib.request.urlretrieve(font.download_url, dest_download)
@@ -273,10 +384,22 @@ def download_and_extract_fonts(
 
 
 def apply_stylistic_sets(ttf_otf_files: list[TtfOtf]):
-    """Apply stylistic sets"""
+    """
+    Applies stylistic sets to the provided font files.
+
+    Args:
+        ttf_otf_files (list[TtfOtf]): A list of font files and their stylistic sets.
+    """
     for file in ttf_otf_files:
         if file.enable_stylistic_sets is True:
-            path = glob.glob(file.path)[0]
+            paths = glob.glob(file.path)
+            if len(paths) == 0:
+                log(
+                    LogLevel.WARNING,
+                    f"the path {file.path} may be incorrect, stylistic sets will not be applied",
+                )
+                continue
+            path = paths[0]
 
             log(
                 LogLevel.INFO,
@@ -301,9 +424,22 @@ def apply_stylistic_sets(ttf_otf_files: list[TtfOtf]):
 
 
 def copy_and_paste_fonts(dest_dir: str, ttf_files: list[TtfOtf]):
-    """Copy downloaded fonts and paste in src/unpatched-fonts inside nerd-fonts repo"""
+    """
+    Copies and pastes font files to the destination directory.
+
+    Args:
+        dest_dir (str): The destination directory.
+        ttf_files (list[TtfOtf]): A list of font files to copy.
+    """
     for file in ttf_files:
-        path = glob.glob(file.path)[0]
+        paths = glob.glob(file.path)
+        if len(paths) == 0:
+            log(
+                LogLevel.WARNING,
+                f"the path {file.path} may be incorrect, this font file will not be copied and pasted",
+            )
+            continue
+        path = paths[0]
 
         dest_copy = os.path.join(dest_dir, "src", "unpatched-fonts")
         log(LogLevel.INFO, f"copying {path} into {dest_copy}")
@@ -312,8 +448,12 @@ def copy_and_paste_fonts(dest_dir: str, ttf_files: list[TtfOtf]):
 
 
 def path_fonts(dest_dir: str):
-    "Path fonts previosly downloaded"
+    """
+    Patches previously downloaded fonts.
 
+    Args:
+        dest_dir (str): The directory containing unpatched fonts.
+    """
     path_unpatched_fonts = os.path.join(dest_dir, "src", "unpatched-fonts")
 
     log(LogLevel.INFO, f"patching fonts in {path_unpatched_fonts}")
@@ -328,7 +468,7 @@ def path_fonts(dest_dir: str):
         path_font_to_patch = os.path.join("src", "unpatched-fonts", font)
         log(
             LogLevel.INFO,
-            f"patching {os.path.join(path_unpatched_fonts ,path_font_to_patch)}",
+            f"patching {os.path.join(path_unpatched_fonts, path_font_to_patch)}",
         )
         with subprocess.Popen(
             [
@@ -348,7 +488,7 @@ def path_fonts(dest_dir: str):
             process.communicate()
             log(
                 LogLevel.INFO,
-                f"{os.path.join(path_unpatched_fonts ,path_font_to_patch)} patched",
+                f"{os.path.join(path_unpatched_fonts, path_font_to_patch)} patched",
             )
 
     path_patched_fonts = os.path.join(dest_dir, "patched-fonts")
