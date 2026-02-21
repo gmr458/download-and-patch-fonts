@@ -36,7 +36,7 @@ fonts = [
     FontMetadata(
         owner="IBM",
         repo="plex",
-        tag="@ibm/plex-mono@1.0.0",
+        tag="@ibm/plex-mono@1.1.0",
         filename="ibm-plex-mono.zip",
         filename_start_with="",
         download_url="",
@@ -49,14 +49,14 @@ fonts = [
         filename_start_with="",
         download_url="",
     ),
-    # FontMetadata(
-    #     owner="be5invis",
-    #     repo="Iosevka",
-    #     tag="",
-    #     filename="",
-    #     filename_start_with="PkgTTF-IosevkaFixed-",
-    #     download_url="",
-    # ),
+    FontMetadata(
+        owner="be5invis",
+        repo="Iosevka",
+        tag="",
+        filename="",
+        filename_start_with="PkgTTF-IosevkaFixed-",
+        download_url="",
+    ),
     FontMetadata(
         owner="JetBrains",
         repo="JetBrainsMono",

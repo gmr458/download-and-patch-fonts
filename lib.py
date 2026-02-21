@@ -360,8 +360,13 @@ def download_and_extract_fonts(
         dest_download = os.path.join(TEMP_DIR_FONTS, font.filename)
 
         log(LogLevel.INFO, f"downloading {font.download_url} into {dest_download}")
-        urllib.request.urlretrieve(font.download_url, dest_download)
-        log(LogLevel.INFO, f"{font.download_url} downloaded into {dest_download}")
+        try:
+            urllib.request.urlretrieve(font.download_url, dest_download)
+            log(LogLevel.INFO, f"{font.download_url} downloaded into {dest_download}")
+        except urllib.error.HTTPError as err:
+            if str(err) == "HTTP Error 404: Not Found":
+                log(LogLevel.ERROR, f"Download URL {font.download_url} not found")
+                continue
 
         if is_ttf_or_otf(font.filename):
             continue
